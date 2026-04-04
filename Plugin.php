@@ -20,7 +20,7 @@ use Typecho\Widget\Helper\Form\Element\Radio;
 use Typecho\Widget\Helper\Form\Element\Select;
 use Widget\Options;
 use Widget\Upload as WidgetUpload;
-use Widget\Menu;
+use Utils\Helper;
 
 if (!defined('__TYPECHO_ROOT_DIR__')) {
     exit;
@@ -49,69 +49,10 @@ class Plugin implements PluginInterface
         \Typecho\Plugin::factory('Widget_Upload')->attachmentHandle = __CLASS__ . '::attachmentHandle';
         \Typecho\Plugin::factory('Widget_Upload')->attachmentDataHandle = __CLASS__ . '::attachmentDataHandle';
 
-        // 注册 OSS 文件管理路由
-        \Typecho\Plugin::factory('Widget_Action')->filter = __CLASS__ . '::addActionRoute';
-
-        // 添加管理菜单（通过 header 注入）
-        \Typecho\Plugin::factory('admin/header.php')->filter = __CLASS__ . '::injectAdminHeader';
+        // 添加管理菜单项 (3 = "管理" 菜单)
+        Helper::addPanel(3, 'AliOssForTypecho/oss-files.php', _t('OSS 文件管理'), _t('管理 OSS 文件'), 'administrator');
 
         return '阿里云 OSS 文件上传插件已激活';
-    }
-
-    /**
-     * 添加路由
-     *
-     * @param array $routes
-     * @return array
-     */
-    public static function addActionRoute(array $routes): array
-    {
-        $routes['ossFiles'] = [
-            'widget' => '\\TypechoPlugin\\AliOssForTypecho\\Action\\OssFiles',
-            'action' => 'ossFiles'
-        ];
-        return $routes;
-    }
-
-    /**
-     * 注入管理后台头部脚本
-     *
-     * @param string $header
-     * @return string
-     */
-    public static function injectAdminHeader(string $header): string
-    {
-        $url =\Common::url('action/ossFiles', \Widget\Options::alloc()->siteUrl);
-        $menuUrl = Common::url('oss-files.php', \Widget\Options::alloc()->adminUrl);
-
-        $script = <<<HTML
-<script>
-(function() {
-    // 等待 DOM 加载完成
-    document.addEventListener('DOMContentLoaded', function() {
-        // 添加菜单项
-        var manageMenu = document.querySelector('.menu-children li a[href*="manage-medias"]');
-        if (manageMenu) {
-            var li = document.createElement('li');
-            li.innerHTML = '<a href="{$menuUrl}">OSS 文件管理</a>';
-            manageMenu.parentElement.parentElement.appendChild(li);
-        }
-
-        // 添加按钮到管理文件页面
-        var uploadForm = document.querySelector('.typecho-list-operate');
-        if (uploadForm && !document.querySelector('.oss-files-btn')) {
-            var btn = document.createElement('a');
-            btn.href = '{$menuUrl}';
-            btn.className = 'btn btn-s oss-files-btn';
-            btn.textContent = 'OSS 文件管理';
-            btn.style.marginLeft = '10px';
-            uploadForm.appendChild(btn);
-        }
-    });
-})();
-</script>
-HTML;
-        return $header . $script;
     }
 
     /**
@@ -121,6 +62,8 @@ HTML;
      */
     public static function deactivate(): void
     {
+        // 移除管理菜单项
+        Helper::removePanel(3, 'AliOssForTypecho/oss-files.php');
     }
 
     /**

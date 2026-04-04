@@ -11,7 +11,8 @@
       "Bash(php -l \"E:/code/AliOssForTypecho/OssUpload.php\")",
       "Bash(curl -sL \"https://raw.githubusercontent.com/typecho/typecho/master/usr/plugins/HelloWorld/Plugin.php\")",
       "Bash(curl:*)",
-      "Bash(grep -n 'pluginHandle\\\\|trigger\\\\|$hasUploaded')"
+      "Bash(grep -n 'pluginHandle\\\\|trigger\\\\|$hasUploaded')",
+      "Bash(grep -n '$panelTable\\\\|panelTable\\\\s*=')"
     ]
   }
 }
