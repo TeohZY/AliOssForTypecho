@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:github.com)",
+      "Bash(gh api:*)",
+      "Bash(curl -sL \"https://raw.githubusercontent.com/aliyun/alibabacloud-oss-php-sdk-v2/master/DEVGUIDE-CN.md\")",
+      "WebSearch",
+      "Bash(curl -sL \"https://docs.typecho.org/develop/structure\")",
+      "WebFetch(domain:developer.dbsox.com)",
+      "Bash(php -l \"E:/code/AliOssForTypecho/Plugin.php\")",
+      "Bash(php -l \"E:/code/AliOssForTypecho/OssUpload.php\")",
+      "Bash(curl -sL \"https://raw.githubusercontent.com/typecho/typecho/master/usr/plugins/HelloWorld/Plugin.php\")",
+      "Bash(curl:*)",
+      "Bash(grep -n 'pluginHandle\\\\|trigger\\\\|$hasUploaded')"
+    ]
+  }
+}
