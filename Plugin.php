@@ -8,20 +8,6 @@
  * @link    https://github.com/yourname/AliOssForTypecho
  */
 
-namespace TypechoPlugin\AliOssForTypecho;
-
-use Typecho\Plugin\PluginInterface;
-use Typecho\Common;
-use Typecho\Date;
-use Typecho\Widget\Helper\Form;
-use Typecho\Widget\Helper\Form\Element\Text;
-use Typecho\Widget\Helper\Form\Element\Password;
-use Typecho\Widget\Helper\Form\Element\Radio;
-use Typecho\Widget\Helper\Form\Element\Select;
-use Widget\Options;
-use Widget\Upload as WidgetUpload;
-use Utils\Helper;
-
 if (!defined('__TYPECHO_ROOT_DIR__')) {
     exit;
 }
@@ -31,7 +17,7 @@ if (!defined('__TYPECHO_ROOT_DIR__')) {
  *
  * @package AliOssForTypecho
  */
-class Plugin implements PluginInterface
+class AliOssForTypecho_Plugin implements Typecho_Plugin_Interface
 {
     // 上传文件目录
     const UPLOAD_DIR = '/usr/uploads';
@@ -43,14 +29,14 @@ class Plugin implements PluginInterface
      */
     public static function activate(): string
     {
-        \Typecho\Plugin::factory('Widget_Upload')->uploadHandle = __CLASS__ . '::uploadHandle';
-        \Typecho\Plugin::factory('Widget_Upload')->modifyHandle = __CLASS__ . '::modifyHandle';
-        \Typecho\Plugin::factory('Widget_Upload')->deleteHandle = __CLASS__ . '::deleteHandle';
-        \Typecho\Plugin::factory('Widget_Upload')->attachmentHandle = __CLASS__ . '::attachmentHandle';
-        \Typecho\Plugin::factory('Widget_Upload')->attachmentDataHandle = __CLASS__ . '::attachmentDataHandle';
+        Typecho_Plugin::factory('Widget_Upload')->uploadHandle = __CLASS__ . '::uploadHandle';
+        Typecho_Plugin::factory('Widget_Upload')->modifyHandle = __CLASS__ . '::modifyHandle';
+        Typecho_Plugin::factory('Widget_Upload')->deleteHandle = __CLASS__ . '::deleteHandle';
+        Typecho_Plugin::factory('Widget_Upload')->attachmentHandle = __CLASS__ . '::attachmentHandle';
+        Typecho_Plugin::factory('Widget_Upload')->attachmentDataHandle = __CLASS__ . '::attachmentDataHandle';
 
         // 添加管理菜单项 (3 = "管理" 菜单)
-        Helper::addPanel(3, 'AliOssForTypecho/oss-files.php', _t('OSS 文件管理'), _t('管理 OSS 文件'), 'administrator');
+        Helper::addPanel(3, 'AliOssForTypecho/oss-files.php', 'OSS 文件管理', '管理 OSS 文件', 'administrator');
 
         return '阿里云 OSS 文件上传插件已激活';
     }
@@ -69,33 +55,33 @@ class Plugin implements PluginInterface
     /**
      * 获取插件配置面板
      *
-     * @param Form $form
+     * @param Typecho_Widget_Helper_Form $form
      * @return void
      */
-    public static function config(Form $form): void
+    public static function config(Typecho_Widget_Helper_Form $form): void
     {
-        $accessKeyId = new Text('accessKeyId', null, '', _t('AccessKey ID'), _t('阿里云 AccessKey ID'));
+        $accessKeyId = new Typecho_Widget_Helper_Form_Element_Text('accessKeyId', null, '', _t('AccessKey ID'), _t('阿里云 AccessKey ID'));
         $form->addInput($accessKeyId);
 
-        $accessKeySecret = new Password('accessKeySecret', null, '', _t('AccessKey Secret'), _t('阿里云 AccessKey Secret'));
+        $accessKeySecret = new Typecho_Widget_Helper_Form_Element_Password('accessKeySecret', null, '', _t('AccessKey Secret'), _t('阿里云 AccessKey Secret'));
         $form->addInput($accessKeySecret);
 
-        $bucket = new Text('bucket', null, '', _t('Bucket 名称'), _t('OSS Bucket 名称'));
+        $bucket = new Typecho_Widget_Helper_Form_Element_Text('bucket', null, '', _t('Bucket 名称'), _t('OSS Bucket 名称'));
         $form->addInput($bucket);
 
-        $region = new Text('region', null, 'cn-hangzhou', _t('区域'), _t('OSS 区域，例如: cn-hangzhou'));
+        $region = new Typecho_Widget_Helper_Form_Element_Text('region', null, 'cn-hangzhou', _t('区域'), _t('OSS 区域，例如: cn-hangzhou'));
         $form->addInput($region);
 
-        $domain = new Text('domain', null, '', _t('自定义域名'), _t('留空则使用默认域名，例如: https://oss.example.com'));
+        $domain = new Typecho_Widget_Helper_Form_Element_Text('domain', null, '', _t('自定义域名'), _t('留空则使用默认域名，例如: https://oss.example.com'));
         $form->addInput($domain);
 
-        $suffix = new Radio('suffix', ['.aliyuncs.com' => _t('外网'), '-internal.aliyuncs.com' => _t('内网')], '.aliyuncs.com', _t('节点访问方式'));
+        $suffix = new Typecho_Widget_Helper_Form_Element_Radio('suffix', ['.aliyuncs.com' => _t('外网'), '-internal.aliyuncs.com' => _t('内网')], '.aliyuncs.com', _t('节点访问方式'));
         $form->addInput($suffix);
 
-        $pathPrefix = new Text('pathPrefix', null, 'typecho/', _t('路径前缀'), _t('文件存储路径前缀，例如: typecho/'));
+        $pathPrefix = new Typecho_Widget_Helper_Form_Element_Text('pathPrefix', null, 'typecho/', _t('路径前缀'), _t('文件存储路径前缀，例如: typecho/'));
         $form->addInput($pathPrefix);
 
-        $renameFormat = new Select('renameFormat', [
+        $renameFormat = new Typecho_Widget_Helper_Form_Element_Select('renameFormat', [
             'timestamp' => _t('时间戳'),
             'original' => _t('保留原文件名')
         ], 'timestamp', _t('文件命名格式'));
@@ -105,10 +91,10 @@ class Plugin implements PluginInterface
     /**
      * 个人用户的配置面板
      *
-     * @param Form $form
+     * @param Typecho_Widget_Helper_Form $form
      * @return void
      */
-    public static function personalConfig(Form $form): void
+    public static function personalConfig(Typecho_Widget_Helper_Form $form): void
     {
     }
 
@@ -126,12 +112,12 @@ class Plugin implements PluginInterface
 
         // 获取安全扩展名
         $ext = self::getSafeName($file['name']);
-        if (!WidgetUpload::checkFileType($ext)) {
+        if (!Widget_Upload::checkFileType($ext)) {
             return false;
         }
 
         // 获取设置参数
-        $options = Options::alloc()->plugin('AliOssForTypecho');
+        $options = Widget_Options::alloc()->plugin('AliOssForTypecho');
 
         // 获取上传文件
         $uploadFile = self::getUploadFile($file);
@@ -152,12 +138,12 @@ class Plugin implements PluginInterface
             }
             $fileName = $baseName . '.' . $ext;
         } else {
-            // 时间戳格式 - 使用微秒时间戳确保唯一性
+            // 时间戳格式
             $fileName = sprintf('%u', crc32(microtime(true))) . '.' . $ext;
         }
 
         // 构建本地路径（用于数据库记录）
-        $path = self::getUploadDir() . '/' . $fileName;
+        $path = self::UPLOAD_DIR . '/' . $fileName;
 
         // 上传到 OSS
         try {
@@ -170,14 +156,14 @@ class Plugin implements PluginInterface
             $mimeType = finfo_file($finfo, $uploadFile);
             finfo_close($finfo);
 
-            $request = new \AlibabaCloud\Oss\V2\Models\PutObjectRequest(
+            $request = new AlibabaCloud\Oss\V2\Models\PutObjectRequest(
                 bucket: $options->bucket,
                 key: $ossPath,
-                body: \AlibabaCloud\Oss\V2\Utils::streamFor($content),
+                body: AlibabaCloud\Oss\V2\Utils::streamFor($content),
                 contentType: $mimeType
             );
             $ossClient->putObject($request);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             error_log('AliOssForTypecho upload error: ' . $e->getMessage());
             return false;
         }
@@ -209,7 +195,7 @@ class Plugin implements PluginInterface
             return false;
         }
 
-        $options = Options::alloc()->plugin('AliOssForTypecho');
+        $options = Widget_Options::alloc()->plugin('AliOssForTypecho');
         $path = $content['attachment']->path;
         $uploadFile = self::getUploadFile($file);
 
@@ -228,14 +214,14 @@ class Plugin implements PluginInterface
             $mimeType = finfo_file($finfo, $uploadFile);
             finfo_close($finfo);
 
-            $request = new \AlibabaCloud\Oss\V2\Models\PutObjectRequest(
+            $request = new AlibabaCloud\Oss\V2\Models\PutObjectRequest(
                 bucket: $options->bucket,
                 key: $ossPath,
-                body: \AlibabaCloud\Oss\V2\Utils::streamFor($content),
+                body: AlibabaCloud\Oss\V2\Utils::streamFor($content),
                 contentType: $mimeType
             );
             $ossClient->putObject($request);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return false;
         }
 
@@ -260,7 +246,7 @@ class Plugin implements PluginInterface
      */
     public static function deleteHandle(array $content): bool
     {
-        $options = Options::alloc()->plugin('AliOssForTypecho');
+        $options = Widget_Options::alloc()->plugin('AliOssForTypecho');
 
         try {
             $ossClient = self::OssInit();
@@ -268,9 +254,9 @@ class Plugin implements PluginInterface
             $fileName = basename($content['attachment']->path);
             $ossPath = rtrim(ltrim($options->pathPrefix, '/'), '/') . '/' . $fileName;
 
-            $request = new \AlibabaCloud\Oss\V2\Models\DeleteObjectRequest($options->bucket, $ossPath);
+            $request = new AlibabaCloud\Oss\V2\Models\DeleteObjectRequest($options->bucket, $ossPath);
             $ossClient->deleteObject($request);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return false;
         }
 
@@ -280,12 +266,12 @@ class Plugin implements PluginInterface
     /**
      * 获取实际文件绝对访问路径
      *
-     * @param \Typecho\Config $attachment 附件配置
+     * @param Typecho_Config $attachment 附件配置
      * @return string
      */
-    public static function attachmentHandle(\Typecho\Config $attachment): string
+    public static function attachmentHandle($attachment): string
     {
-        $options = Options::alloc()->plugin('AliOssForTypecho');
+        $options = Widget_Options::alloc()->plugin('AliOssForTypecho');
         $domain = $options->domain;
 
         if (empty($domain)) {
@@ -306,7 +292,7 @@ class Plugin implements PluginInterface
      */
     public static function attachmentDataHandle(array $content): string
     {
-        $options = Options::alloc()->plugin('AliOssForTypecho');
+        $options = Widget_Options::alloc()->plugin('AliOssForTypecho');
 
         try {
             $ossClient = self::OssInit();
@@ -314,10 +300,10 @@ class Plugin implements PluginInterface
             $fileName = basename($content['attachment']->path);
             $ossPath = rtrim(ltrim($options->pathPrefix, '/'), '/') . '/' . $fileName;
 
-            $request = new \AlibabaCloud\Oss\V2\Models\GetObjectRequest($options->bucket, $ossPath);
+            $request = new AlibabaCloud\Oss\V2\Models\GetObjectRequest($options->bucket, $ossPath);
             $result = $ossClient->getObject($request);
             return $result;
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return '';
         }
     }
@@ -325,9 +311,9 @@ class Plugin implements PluginInterface
     /**
      * OSS 初始化
      *
-     * @return \AlibabaCloud\Oss\V2\Client
+     * @return AlibabaCloud\Oss\V2\Client
      */
-    private static function OssInit(): \AlibabaCloud\Oss\V2\Client
+    private static function OssInit(): AlibabaCloud\Oss\V2\Client
     {
         static $client = null;
 
@@ -338,30 +324,17 @@ class Plugin implements PluginInterface
         // 按需加载 SDK
         require_once __DIR__ . '/oss/alibabacloud-oss-php-sdk-v2-0.4.0.phar';
 
-        $options = Options::alloc()->plugin('AliOssForTypecho');
+        $options = Widget_Options::alloc()->plugin('AliOssForTypecho');
 
-        $cfg = \AlibabaCloud\Oss\V2\Config::loadDefault();
-        $cfg->setCredentialsProvider(new \AlibabaCloud\Oss\V2\Credentials\StaticCredentialsProvider(
+        $cfg = AlibabaCloud\Oss\V2\Config::loadDefault();
+        $cfg->setCredentialsProvider(new AlibabaCloud\Oss\V2\Credentials\StaticCredentialsProvider(
             $options->accessKeyId,
             $options->accessKeySecret
         ));
         $cfg->setRegion($options->region);
 
-        $client = new \AlibabaCloud\Oss\V2\Client($cfg);
+        $client = new AlibabaCloud\Oss\V2\Client($cfg);
         return $client;
-    }
-
-    /**
-     * 获取上传目录
-     *
-     * @return string
-     */
-    private static function getUploadDir(): string
-    {
-        if (defined('__TYPECHO_UPLOAD_DIR__')) {
-            return __TYPECHO_UPLOAD_DIR__;
-        }
-        return self::UPLOAD_DIR;
     }
 
     /**
