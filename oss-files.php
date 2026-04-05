@@ -111,6 +111,7 @@ if (empty($options->accessKeyId) || empty($options->accessKeySecret) || empty($o
             <div class="oss-main">
                 <div class="oss-toolbar">
                     <div class="oss-toolbar-left">
+                        <button class="btn oss-btn-secondary oss-sidebar-toggle" onclick="toggleSidebar()">☰ 存储桶信息</button>
                         <label>每页
                             <select id="pageSize" class="oss-select" onchange="changePageSize()">
                                 <option value="10">10</option>
@@ -155,12 +156,13 @@ if (empty($options->accessKeyId) || empty($options->accessKeySecret) || empty($o
                     </div>
                 </div>
 
-                <div id="ossFilesEmpty" class="typecho-list-table-wrap" style="display: none;">
+                <div id="ossFilesEmpty" class="oss-empty" style="display: none;">
                     <div class="notice">暂无文件</div>
                 </div>
 
-                <div id="ossFilesList" class="typecho-list-table-wrap" style="display: none;">
-                    <table class="typecho-list-table">
+                <div id="ossFilesList" class="oss-files-list" style="display: none;">
+                    <!-- 桌面端表格 -->
+                    <table class="typecho-list-table oss-table-desktop">
                         <thead>
                             <tr>
                                 <th width="45%">文件名</th>
@@ -172,6 +174,8 @@ if (empty($options->accessKeyId) || empty($options->accessKeySecret) || empty($o
                         <tbody id="ossFilesBody">
                         </tbody>
                     </table>
+                    <!-- 移动端卡片列表 -->
+                    <div id="ossFilesCards" class="oss-cards-mobile"></div>
                 </div>
             </div>
         </div>
@@ -302,6 +306,8 @@ if (empty($options->accessKeyId) || empty($options->accessKeySecret) || empty($o
 .oss-file-actions {
     display: flex;
     gap: 6px;
+    white-space: nowrap;
+    flex-wrap: nowrap;
 }
 .oss-file-actions .btn {
     padding: 4px 10px;
@@ -310,6 +316,7 @@ if (empty($options->accessKeyId) || empty($options->accessKeySecret) || empty($o
     border: none;
     cursor: pointer;
     transition: all 0.2s;
+    white-space: nowrap;
 }
 .oss-file-actions .btn:hover {
     transform: translateY(-1px);
@@ -388,6 +395,177 @@ if (empty($options->accessKeyId) || empty($options->accessKeySecret) || empty($o
 .oss-page-input:focus {
     outline: none;
     border-color: #1a73e8;
+}
+
+/* 响应式布局 - 平板和手机 */
+@media screen and (max-width: 768px) {
+    .oss-layout {
+        flex-direction: column;
+        gap: 16px;
+        padding: 12px 0;
+    }
+    .oss-sidebar {
+        width: 100%;
+        padding: 16px;
+        display: none;
+        order: -1;
+    }
+    .oss-sidebar.oss-sidebar-open {
+        display: block;
+    }
+    .oss-main {
+        padding: 16px;
+        width: 100%;
+    }
+    .oss-toolbar {
+        flex-direction: column;
+        gap: 12px;
+        align-items: flex-start;
+    }
+    .oss-toolbar-left {
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+    .oss-toolbar-right {
+        width: 100%;
+        text-align: left;
+    }
+    .oss-pagination {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+    .oss-table-desktop {
+        display: none;
+    }
+    .oss-cards-mobile {
+        display: flex;
+    }
+    .oss-empty {
+        padding: 20px;
+        text-align: center;
+    }
+}
+
+/* 小屏幕手机 */
+@media screen and (max-width: 480px) {
+    .oss-sidebar {
+        padding: 12px;
+    }
+    .oss-sidebar-toggle {
+        display: block;
+        width: 100%;
+        margin-bottom: 10px;
+        padding: 10px;
+        font-size: 14px;
+    }
+    .oss-main {
+        padding: 12px;
+    }
+    .oss-info-item {
+        margin-bottom: 10px;
+    }
+    .oss-toolbar-left {
+        width: 100%;
+    }
+    .oss-toolbar-left label {
+        font-size: 12px;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+    .oss-select {
+        padding: 6px 8px;
+        font-size: 14px;
+        margin: 2px;
+    }
+    .oss-page-input {
+        width: 50px;
+        padding: 6px 8px;
+        font-size: 14px;
+    }
+    /* 移动端卡片样式 */
+    .oss-cards-mobile {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+    .oss-file-card {
+        background: #fff;
+        border: 1px solid #e8eaed;
+        border-radius: 8px;
+        padding: 12px;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    }
+    .oss-card-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 10px;
+    }
+    .oss-card-thumb {
+        width: 48px;
+        height: 48px;
+        object-fit: cover;
+        border-radius: 6px;
+        border: 1px solid #e8eaed;
+        flex-shrink: 0;
+    }
+    .oss-card-icon {
+        width: 48px;
+        height: 48px;
+        background: #f1f3f4;
+        border-radius: 6px;
+        flex-shrink: 0;
+    }
+    .oss-card-info {
+        flex: 1;
+        min-width: 0;
+    }
+    .oss-card-name {
+        font-size: 14px;
+        font-weight: 500;
+        color: #202124;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        margin-bottom: 4px;
+    }
+    .oss-card-meta {
+        font-size: 12px;
+        color: #5f6368;
+    }
+    .oss-card-actions {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+    .oss-card-actions .btn {
+        flex: 1;
+        min-width: 0;
+        padding: 10px 12px;
+        font-size: 13px;
+        text-align: center;
+        border-radius: 6px;
+        box-sizing: border-box;
+    }
+    .oss-btn-secondary, .oss-btn-warn {
+        padding: 6px 10px;
+        font-size: 13px;
+    }
+}
+
+/* 桌面端隐藏切换按钮 */
+@media screen and (min-width: 481px) {
+    .oss-sidebar-toggle {
+        display: none;
+    }
+}
+
+/* 桌面端隐藏卡片 */
+@media screen and (min-width: 481px) {
+    .oss-cards-mobile {
+        display: none;
+    }
 }
 </style>
 
@@ -525,37 +703,55 @@ function jumpToPage() {
     loadPage(page);
 }
 
+function toggleSidebar() {
+    var sidebar = document.querySelector('.oss-sidebar');
+    sidebar.classList.toggle('oss-sidebar-open');
+}
+
+function isMobile() {
+    return window.innerWidth <= 768;
+}
+
 function renderFiles(files) {
     var tbody = document.getElementById('ossFilesBody');
+    var cardsContainer = document.getElementById('ossFilesCards');
     tbody.innerHTML = '';
+    cardsContainer.innerHTML = '';
 
     files.forEach(function(file) {
+        // 桌面端表格行
         var row = document.createElement('tr');
-
-        var nameTd = document.createElement('td');
-        nameTd.innerHTML = '<div class="oss-file-name">' +
+        row.innerHTML =
+            '<td><div class="oss-file-name">' +
             (file.isImage ? '<img src="' + file.url + '" class="oss-file-thumb" />' : '') +
             '<span title="' + file.key + '">' + file.name + '</span>' +
-            '</div>';
-
-        var sizeTd = document.createElement('td');
-        sizeTd.textContent = file.size;
-
-        var timeTd = document.createElement('td');
-        timeTd.textContent = new Date(file.lastModified).toLocaleString('zh-CN');
-
-        var actionTd = document.createElement('td');
-        actionTd.className = 'oss-file-actions';
-        actionTd.innerHTML =
-            '<a href="' + file.url + '" target="_blank" class="btn btn-s oss-btn-secondary">查看</a>' +
+            '</div></td>' +
+            '<td>' + file.size + '</td>' +
+            '<td>' + new Date(file.lastModified).toLocaleString('zh-CN') + '</td>' +
+            '<td class="oss-file-actions">' +
+            '<button class="btn btn-s oss-btn-secondary" onclick="window.open(\'' + file.url + '\')">查看</button>' +
             '<button class="btn btn-s oss-btn-secondary copy-btn" data-url="' + file.url + '">复制</button>' +
-            '<button class="btn btn-s oss-btn-warn" onclick="deleteFile(\'' + file.key + '\')">删除</button>';
-
-        row.appendChild(nameTd);
-        row.appendChild(sizeTd);
-        row.appendChild(timeTd);
-        row.appendChild(actionTd);
+            '<button class="btn btn-s oss-btn-warn" onclick="deleteFile(\'' + file.key + '\')">删除</button>' +
+            '</td>';
         tbody.appendChild(row);
+
+        // 移动端卡片
+        var card = document.createElement('div');
+        card.className = 'oss-file-card';
+        card.innerHTML =
+            '<div class="oss-card-header">' +
+            (file.isImage ? '<img src="' + file.url + '" class="oss-card-thumb" />' : '<div class="oss-card-icon"></div>') +
+            '<div class="oss-card-info">' +
+            '<div class="oss-card-name" title="' + file.key + '">' + file.name + '</div>' +
+            '<div class="oss-card-meta">' + file.size + ' · ' + new Date(file.lastModified).toLocaleDateString('zh-CN') + '</div>' +
+            '</div>' +
+            '</div>' +
+            '<div class="oss-card-actions">' +
+            '<button class="btn oss-btn-secondary" onclick="window.open(\'' + file.url + '\')">查看</button>' +
+            '<button class="btn oss-btn-secondary copy-btn" data-url="' + file.url + '">复制</button>' +
+            '<button class="btn oss-btn-warn" onclick="deleteFile(\'' + file.key + '\')">删除</button>' +
+            '</div>';
+        cardsContainer.appendChild(card);
     });
 
     // 复制链接功能
