@@ -11,7 +11,7 @@ include 'common.php';
 include 'header.php';
 include 'menu.php';
 
-$options = Options::alloc()->plugin('AliOssForTypecho');
+$options = Widget_Options::alloc()->plugin('AliOssForTypecho');
 
 // 检查是否配置了 OSS
 if (empty($options->accessKeyId) || empty($options->accessKeySecret) || empty($options->bucket)) {
@@ -275,7 +275,7 @@ include 'footer.php';
 function listFiles() {
     require_once __DIR__ . '/oss/alibabacloud-oss-php-sdk-v2-0.4.0.phar';
 
-    $options = Options::alloc()->plugin('AliOssForTypecho');
+    $options = Widget_Options::alloc()->plugin('AliOssForTypecho');
     $page = $request->get('page', 1);
     $pageSize = 20;
 
@@ -344,7 +344,7 @@ function listFiles() {
 function deleteFile() {
     require_once __DIR__ . '/oss/alibabacloud-oss-php-sdk-v2-0.4.0.phar';
 
-    $options = Options::alloc()->plugin('AliOssForTypecho');
+    $options = Widget_Options::alloc()->plugin('AliOssForTypecho');
     $key = $request->get('key');
 
     if (empty($key)) {
@@ -384,7 +384,7 @@ function deleteFile() {
  * 获取文件 URL
  */
 function getFileUrl($key) {
-    $options = Options::alloc()->plugin('AliOssForTypecho');
+    $options = Widget_Options::alloc()->plugin('AliOssForTypecho');
     $domain = $options->domain;
 
     if (empty($domain)) {
