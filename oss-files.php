@@ -39,6 +39,16 @@ if (empty($options->accessKeyId) || empty($options->accessKeySecret) || empty($o
 
 // 处理 AJAX 请求
 if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest') {
+    // 检查是否为超级管理员
+    $user = Widget_Options::alloc()->user;
+    if (!$user || !$user->pass('administrator')) {
+        echo json_encode([
+            'success' => false,
+            'message' => '权限不足，需要管理员权限'
+        ]);
+        exit;
+    }
+
     // 关闭所有输出缓冲，确保只输出 JSON
     while (ob_get_level()) {
         ob_end_clean();
