@@ -15,7 +15,21 @@ $options = Widget_Options::alloc()->plugin('AliOssForTypecho');
 
 // 检查是否配置了 OSS
 if (empty($options->accessKeyId) || empty($options->accessKeySecret) || empty($options->bucket)) {
-    echo '<div class="typecho-message notice"><p>请先在插件设置中配置 OSS 参数</p></div>';
+    ?>
+    <main class="main">
+        <div class="body container">
+            <?php include 'page-title.php'; ?>
+            <div class="row typecho-page-main" role="main">
+                <div class="col-mb-12">
+                    <div class="typecho-message notice">
+                        <p>请先配置 OSS 参数才能使用文件管理功能</p>
+                        <p><a href="<?php echo $options->adminUrl('options-plugin.php?config=AliOssForTypecho'); ?>" class="btn primary">前往设置</a></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+    <?php
     include 'copyright.php';
     include 'common-js.php';
     include 'footer.php';
