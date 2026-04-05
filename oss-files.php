@@ -7,6 +7,42 @@ if (!defined('__TYPECHO_ROOT_DIR__')) {
     exit;
 }
 
+// 处理 AJAX 请求 - 必须在 include 其他文件之前检查
+if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest') {
+    error_reporting(0);
+    ini_set('display_errors', 0);
+    header('Content-Type: application/json; charset=utf-8');
+
+    // 检查是否为超级管理员
+    $isAdmin = false;
+    try {
+        include 'common.php';
+
+        // 使用 Widget_User 获取当前用户
+        $user = Widget_User::alloc();
+        if ($user && isset($user->group) && $user->group === 'administrator') {
+            $isAdmin = true;
+        }
+    } catch (Exception $e) {
+        $isAdmin = false;
+    }
+
+    if (!$isAdmin) {
+        echo json_encode([
+            'success' => false,
+            'message' => '权限不足，需要管理员权限'
+        ]);
+        exit;
+    }
+
+    if (isset($_GET['do']) && $_GET['do'] === 'delete') {
+        deleteFile();
+    } else {
+        listFiles();
+    }
+    exit;
+}
+
 include 'common.php';
 include 'header.php';
 include 'menu.php';
@@ -34,33 +70,6 @@ if (empty($options->accessKeyId) || empty($options->accessKeySecret) || empty($o
     include 'copyright.php';
     include 'common-js.php';
     include 'footer.php';
-    exit;
-}
-
-// 处理 AJAX 请求
-if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest') {
-    // 检查是否为超级管理员
-    $user = Widget_Options::alloc()->user;
-    if (!$user || !$user->pass('administrator')) {
-        echo json_encode([
-            'success' => false,
-            'message' => '权限不足，需要管理员权限'
-        ]);
-        exit;
-    }
-
-    // 关闭所有输出缓冲，确保只输出 JSON
-    while (ob_get_level()) {
-        ob_end_clean();
-    }
-    error_reporting(0);
-    ini_set('display_errors', 'Off');
-    header('Content-Type: application/json; charset=utf-8');
-    if (isset($_GET['do']) && $_GET['do'] === 'delete') {
-        deleteFile();
-    } else {
-        listFiles();
-    }
     exit;
 }
 ?>
