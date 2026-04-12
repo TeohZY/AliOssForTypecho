@@ -7,6 +7,9 @@ if (!defined('__TYPECHO_ROOT_DIR__')) {
     exit;
 }
 
+// 获取插件目录的 URL
+define('AliOssForTypecho_URL', rtrim(Helper::options()->pluginUrl, '/') . '/AliOssForTypecho/');
+
 // 处理 AJAX 请求 - 必须在 include 其他文件之前检查
 if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest') {
     error_reporting(0);
@@ -183,6 +186,26 @@ if (empty($options->accessKeyId) || empty($options->accessKeySecret) || empty($o
 </main>
 
 <style>
+/* 图片预览弹窗样式 */
+#imagePreviewDialog button:hover,
+#imagePreviewDialog #previewCloseBtn:hover {
+    background: rgba(255,255,255,0.2) !important;
+}
+#imagePreviewDialog .preview-thumbs::-webkit-scrollbar {
+    height: 4px;
+}
+#imagePreviewDialog .preview-thumbs::-webkit-scrollbar-track {
+    background: rgba(255,255,255,0.1);
+    border-radius: 2px;
+}
+#imagePreviewDialog .preview-thumbs::-webkit-scrollbar-thumb {
+    background: rgba(255,255,255,0.3);
+    border-radius: 2px;
+}
+#imagePreviewDialog .preview-thumbs img {
+    pointer-events: none;
+}
+
 .oss-layout {
     display: flex;
     gap: 24px;
@@ -283,20 +306,25 @@ if (empty($options->accessKeyId) || empty($options->accessKeySecret) || empty($o
     border-bottom: none;
 }
 .oss-file-thumb {
-    max-width: 50px;
-    max-height: 50px;
+    width: 48px;
+    height: 48px;
     object-fit: cover;
     border-radius: 6px;
     margin-right: 12px;
     border: 1px solid #e8eaed;
+    flex-shrink: 0;
 }
 .oss-file-name {
     display: flex;
     align-items: center;
+    min-width: 0;
 }
 .oss-file-name span {
     color: #202124;
     font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 .oss-file-name small {
     color: #5f6368;
@@ -570,6 +598,177 @@ if (empty($options->accessKeyId) || empty($options->accessKeySecret) || empty($o
 </style>
 
 <script>
+var AliOssForTypecho_URL = '<?php echo AliOssForTypecho_URL; ?>';
+
+// 图片预览
+function previewImage(index) {
+    var start = (currentPage - 1) * pageSize;
+    var end = start + pageSize;
+    var pageFiles = allFiles.slice(start, end);
+    var imageFiles = pageFiles.filter(function(f) { return f.isImage; });
+    var imageIndex = imageFiles.findIndex(function(f) { return pageFiles.indexOf(f) === index; });
+    if (imageIndex === -1) imageIndex = 0;
+
+    var files = imageFiles.map(function(file) {
+        return { src: file.url, name: file.name };
+    });
+
+    if (files.length === 0) return;
+
+    // 创建或显示预览 dialog
+    var dialog = document.getElementById('imagePreviewDialog');
+    if (!dialog) {
+        dialog = document.createElement('div');
+        dialog.id = 'imagePreviewDialog';
+        dialog.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.95);z-index:100000;display:none;justify-content:center;align-items:center;flex-direction:column;opacity:0;transition:opacity 0.2s;user-select:none;-webkit-user-select:none;';
+        dialog.innerHTML = '' +
+            '<div style="position:absolute;top:0;left:0;right:0;height:50px;display:flex;align-items:center;justify-content:space-between;padding:0 20px;background:rgba(0,0,0,0.5);user-select:none;-webkit-user-select:none;">' +
+                '<div id="previewImgName" style="color:#fff;font-size:14px;max-width:50%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;user-select:none;-webkit-user-select:none;"></div>' +
+                '<div style="display:flex;gap:10px;user-select:none;-webkit-user-select:none;">' +
+                    '<button id="previewZoomOut" style="background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.3);border-radius:4px;color:#fff;padding:5px 10px;cursor:pointer;font-size:16px;line-height:1;user-select:none;-webkit-user-select:none;">−</button>' +
+                    '<button id="previewZoomReset" style="background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.3);border-radius:4px;color:#fff;padding:5px 10px;cursor:pointer;font-size:12px;user-select:none;-webkit-user-select:none;">100%</button>' +
+                    '<button id="previewZoomIn" style="background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.3);border-radius:4px;color:#fff;padding:5px 10px;cursor:pointer;font-size:16px;line-height:1;user-select:none;-webkit-user-select:none;">+</button>' +
+                    '<a id="previewImgDown" href="#" download target="_blank" style="color:#fff;font-size:13px;text-decoration:none;padding:5px 12px;border:1px solid rgba(255,255,255,0.3);border-radius:4px;user-select:none;-webkit-user-select:none;">下载</a>' +
+                    '<button id="previewCloseBtn" style="background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.3);border-radius:4px;color:#fff;padding:5px 10px;cursor:pointer;font-size:16px;line-height:1;user-select:none;-webkit-user-select:none;">✕</button>' +
+                '</div>' +
+            '</div>' +
+            '<div id="previewImgWrap" style="flex:1;display:flex;justify-content:center;align-items:center;width:100%;height:100%;overflow:hidden;user-select:none;-webkit-user-select:none;position:relative;">' +
+                '<img id="previewImg" style="max-width:92%;max-height:85%;object-fit:contain;cursor:zoom-out;transition:transform 0.15s;user-select:none;-webkit-user-select:none;-webkit-user-drag:none;" />' +
+            '</div>' +
+            '<div id="previewLoading" style="position:absolute;color:#fff;font-size:14px;display:none;user-select:none;-webkit-user-select:none;">加载中...</div>' +
+            '<div id="previewCounter" style="position:absolute;bottom:60px;color:rgba(255,255,255,0.7);font-size:13px;user-select:none;-webkit-user-select:none;"></div>' +
+            '<div class="preview-nav-btn preview-prev" style="position:absolute;top:50%;left:15px;transform:translateY(-50%);width:50px;height:80px;background:rgba(0,0,0,0.3);border:none;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#fff;font-size:32px;opacity:0.7;transition:opacity 0.2s,background 0.2s;user-select:none;-webkit-user-select:none;">‹</div>' +
+            '<div class="preview-nav-btn preview-next" style="position:absolute;top:50%;right:15px;transform:translateY(-50%);width:50px;height:80px;background:rgba(0,0,0,0.3);border:none;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#fff;font-size:32px;opacity:0.7;transition:opacity 0.2s,background 0.2s;user-select:none;-webkit-user-select:none;">›</div>' +
+            '<div class="preview-thumbs" style="position:absolute;bottom:10px;left:50%;transform:translateX(-50%);display:flex;gap:8px;max-width:90%;overflow-x:auto;padding:10px;user-select:none;-webkit-user-select:none;"></div>';
+        document.body.appendChild(dialog);
+
+        // 关闭按钮事件
+        document.getElementById('previewCloseBtn').onclick = closePreviewDialog;
+
+        // 放大按钮
+        document.getElementById('previewZoomIn').onclick = function(e) {
+            e.stopPropagation();
+            previewZoom(0.2);
+        };
+
+        // 缩小按钮
+        document.getElementById('previewZoomOut').onclick = function(e) {
+            e.stopPropagation();
+            previewZoom(-0.2);
+        };
+
+        // 重置缩放
+        document.getElementById('previewZoomReset').onclick = function(e) {
+            e.stopPropagation();
+            previewZoomReset();
+        };
+
+        // 滚轮缩放
+        document.getElementById('previewImgWrap').onwheel = function(e) {
+            e.preventDefault();
+            previewZoom(e.deltaY > 0 ? -0.1 : 0.1);
+        };
+
+        // 点击背景关闭
+        dialog.onclick = function(e) {
+            if (e.target === dialog || e.target.id === 'previewImgWrap') closePreviewDialog();
+        };
+
+        // 导航按钮事件
+        dialog.querySelector('.preview-prev').onclick = function(e) { e.stopPropagation(); previewNav(-1); };
+        dialog.querySelector('.preview-next').onclick = function(e) { e.stopPropagation(); previewNav(1); };
+
+        // 触摸滑动支持
+        var touchStartX = 0;
+        dialog.addEventListener('touchstart', function(e) {
+            touchStartX = e.touches[0].clientX;
+        }, { passive: true });
+        dialog.addEventListener('touchend', function(e) {
+            var diff = touchStartX - e.changedTouches[0].clientX;
+            if (Math.abs(diff) > 50) {
+                previewNav(diff > 0 ? 1 : -1);
+            }
+        }, { passive: true });
+    }
+
+    window.previewFiles = files;
+    window.previewIndex = imageIndex;
+    window.previewScale = 1;
+
+    dialog.style.display = 'flex';
+    setTimeout(function() { dialog.style.opacity = '1'; }, 10);
+
+    updatePreview();
+    dialog.focus();
+
+    // ESC 键关闭
+    document.addEventListener('keydown', previewEscHandler);
+}
+
+function previewZoom(delta) {
+    window.previewScale = Math.max(0.5, Math.min(3, window.previewScale + delta));
+    var img = document.getElementById('previewImg');
+    var resetBtn = document.getElementById('previewZoomReset');
+    img.style.transform = 'scale(' + window.previewScale + ')';
+    img.style.pointerEvents = window.previewScale > 1 ? 'none' : 'auto';
+    resetBtn.textContent = Math.round(window.previewScale * 100) + '%';
+}
+
+function previewZoomReset() {
+    window.previewScale = 1;
+    document.getElementById('previewImg').style.transform = 'scale(1)';
+    document.getElementById('previewZoomReset').textContent = '100%';
+}
+
+function updatePreview() {
+    var file = window.previewFiles[window.previewIndex];
+    document.getElementById('previewImg').src = file.src;
+    document.getElementById('previewImgName').textContent = file.name;
+    document.getElementById('previewCounter').textContent = (window.previewIndex + 1) + ' / ' + window.previewFiles.length;
+    document.getElementById('previewImgDown').href = file.src;
+    document.getElementById('previewImgDown').download = file.name;
+
+    // 重置缩放
+    previewZoomReset();
+
+    // 更新缩略图指示器
+    var thumbs = document.querySelector('.preview-thumbs');
+    thumbs.innerHTML = '';
+    window.previewFiles.forEach(function(f, i) {
+        var thumb = document.createElement('div');
+        thumb.style.cssText = 'width:40px;height:40px;flex-shrink:0;border-radius:4px;overflow:hidden;cursor:pointer;border:2px solid ' + (i === window.previewIndex ? '#fff' : 'transparent') + ';opacity:' + (i === window.previewIndex ? '1' : '0.5') + ';transition:all 0.2s;';
+        thumb.innerHTML = '<img src="' + f.src + '" style="width:100%;height:100%;object-fit:cover;" />';
+        thumb.onclick = function(e) {
+            e.stopPropagation();
+            window.previewIndex = i;
+            updatePreview();
+        };
+        thumbs.appendChild(thumb);
+    });
+}
+
+function closePreviewDialog() {
+    document.removeEventListener('keydown', previewEscHandler);
+    var dialog = document.getElementById('imagePreviewDialog');
+    if (dialog) {
+        dialog.style.opacity = '0';
+        setTimeout(function() { dialog.style.display = 'none'; }, 200);
+    }
+}
+
+function previewEscHandler(e) {
+    if (e.key === 'Escape') closePreviewDialog();
+    if (e.key === 'ArrowLeft') previewNav(-1);
+    if (e.key === 'ArrowRight') previewNav(1);
+}
+
+function previewNav(dir) {
+    window.previewIndex += dir;
+    if (window.previewIndex < 0) window.previewIndex = window.previewFiles.length - 1;
+    if (window.previewIndex >= window.previewFiles.length) window.previewIndex = 0;
+    updatePreview();
+}
+
 var currentPage = 1;
 var isLoading = false;
 var allFiles = [];
@@ -718,18 +917,24 @@ function renderFiles(files) {
     tbody.innerHTML = '';
     cardsContainer.innerHTML = '';
 
-    files.forEach(function(file) {
+    files.forEach(function(file, index) {
         // 桌面端表格行
         var row = document.createElement('tr');
+        var viewBtn = file.isImage
+            ? '<button class="btn btn-s oss-btn-secondary" onclick="previewImage(' + index + ')">查看</button>'
+            : '<button class="btn btn-s oss-btn-secondary" onclick="window.open(\'' + file.url + '\')">查看</button>';
+        var thumbHtml = file.isImage
+            ? '<a class="pswp-image" href="' + file.url + '" data-pswp-width="1200" data-pswp-height="1200"><img src="' + file.url + '" class="oss-file-thumb" /></a>'
+            : '';
         row.innerHTML =
             '<td><div class="oss-file-name">' +
-            (file.isImage ? '<img src="' + file.url + '" class="oss-file-thumb" />' : '') +
+            thumbHtml +
             '<span title="' + file.key + '">' + file.name + '</span>' +
             '</div></td>' +
             '<td>' + file.size + '</td>' +
             '<td>' + new Date(file.lastModified).toLocaleString('zh-CN') + '</td>' +
             '<td class="oss-file-actions">' +
-            '<button class="btn btn-s oss-btn-secondary" onclick="window.open(\'' + file.url + '\')">查看</button>' +
+            viewBtn +
             '<button class="btn btn-s oss-btn-secondary copy-btn" data-url="' + file.url + '">复制</button>' +
             '<button class="btn btn-s oss-btn-warn" onclick="deleteFile(\'' + file.key + '\')">删除</button>' +
             '</td>';
@@ -738,16 +943,22 @@ function renderFiles(files) {
         // 移动端卡片
         var card = document.createElement('div');
         card.className = 'oss-file-card';
+        var cardThumbHtml = file.isImage
+            ? '<a class="pswp-image" href="' + file.url + '" data-pswp-width="1200" data-pswp-height="1200"><img src="' + file.url + '" class="oss-card-thumb" /></a>'
+            : '<div class="oss-card-icon"></div>';
+        var cardViewBtn = file.isImage
+            ? '<button class="btn oss-btn-secondary" onclick="previewImage(' + index + ')">查看</button>'
+            : '<button class="btn oss-btn-secondary" onclick="window.open(\'' + file.url + '\')">查看</button>';
         card.innerHTML =
             '<div class="oss-card-header">' +
-            (file.isImage ? '<img src="' + file.url + '" class="oss-card-thumb" />' : '<div class="oss-card-icon"></div>') +
+            cardThumbHtml +
             '<div class="oss-card-info">' +
             '<div class="oss-card-name" title="' + file.key + '">' + file.name + '</div>' +
             '<div class="oss-card-meta">' + file.size + ' · ' + new Date(file.lastModified).toLocaleDateString('zh-CN') + '</div>' +
             '</div>' +
             '</div>' +
             '<div class="oss-card-actions">' +
-            '<button class="btn oss-btn-secondary" onclick="window.open(\'' + file.url + '\')">查看</button>' +
+            cardViewBtn +
             '<button class="btn oss-btn-secondary copy-btn" data-url="' + file.url + '">复制</button>' +
             '<button class="btn oss-btn-warn" onclick="deleteFile(\'' + file.key + '\')">删除</button>' +
             '</div>';
@@ -762,6 +973,26 @@ function renderFiles(files) {
             navigator.clipboard.writeText(url).then(function() {
                 alert('链接已复制');
             });
+        });
+    });
+
+    // 图片预览点击事件
+    document.querySelectorAll('.pswp-image').forEach(function(link) {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            var url = this.getAttribute('href');
+            var imageFiles = allFiles.filter(function(f) { return f.isImage; });
+            var index = imageFiles.findIndex(function(f) { return f.url === url; });
+            if (index !== -1) {
+                // 找到该图片在当前页面的索引
+                var currentPageFiles = allFiles.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+                var cardIndex = currentPageFiles.findIndex(function(f) { return f.url === url; });
+                if (cardIndex !== -1) {
+                    previewImage(cardIndex);
+                } else {
+                    previewImage(index);
+                }
+            }
         });
     });
 }
@@ -801,7 +1032,6 @@ function deleteFile(key) {
 
 <?php
 include 'copyright.php';
-include 'common-js.php';
 include 'footer.php';
 
 /**
@@ -864,7 +1094,7 @@ function listFiles() {
                         'name' => $fileName,
                         'size' => formatSize($object->size),
                         'sizeRaw' => $object->size,
-                        'lastModified' => is_object($object->lastModified) ? $object->lastModified->getTimestamp() : strtotime($object->lastModified),
+                        'lastModified' => (is_object($object->lastModified) ? $object->lastModified->getTimestamp() : strtotime($object->lastModified)) * 1000,
                         'isImage' => $isImage,
                         'url' => getFileUrl($object->key)
                     ];
