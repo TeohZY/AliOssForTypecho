@@ -187,9 +187,8 @@ if (empty($options->accessKeyId) || empty($options->accessKeySecret) || empty($o
 
 <style>
 /* 图片预览弹窗样式 */
-#imagePreviewDialog button:hover,
-#imagePreviewDialog #previewCloseBtn:hover {
-    background: rgba(255,255,255,0.2) !important;
+#imagePreviewDialog button:hover {
+    background: rgba(255,255,255,0.25) !important;
 }
 #imagePreviewDialog .preview-thumbs::-webkit-scrollbar {
     height: 4px;
@@ -620,26 +619,26 @@ function previewImage(index) {
     if (!dialog) {
         dialog = document.createElement('div');
         dialog.id = 'imagePreviewDialog';
-        dialog.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.95);z-index:100000;display:none;justify-content:center;align-items:center;flex-direction:column;opacity:0;transition:opacity 0.2s;user-select:none;-webkit-user-select:none;';
+        dialog.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.95);z-index:100000;display:none;opacity:0;transition:opacity 0.2s;user-select:none;-webkit-user-select:none;';
         dialog.innerHTML = '' +
-            '<div style="position:absolute;top:0;left:0;right:0;height:50px;display:flex;align-items:center;justify-content:space-between;padding:0 20px;background:rgba(0,0,0,0.5);user-select:none;-webkit-user-select:none;">' +
-                '<div id="previewImgName" style="color:#fff;font-size:14px;max-width:50%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;user-select:none;-webkit-user-select:none;"></div>' +
-                '<div style="display:flex;gap:10px;user-select:none;-webkit-user-select:none;">' +
-                    '<button id="previewZoomOut" style="background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.3);border-radius:4px;color:#fff;padding:5px 10px;cursor:pointer;font-size:16px;line-height:1;user-select:none;-webkit-user-select:none;">−</button>' +
-                    '<button id="previewZoomReset" style="background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.3);border-radius:4px;color:#fff;padding:5px 10px;cursor:pointer;font-size:12px;user-select:none;-webkit-user-select:none;">100%</button>' +
-                    '<button id="previewZoomIn" style="background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.3);border-radius:4px;color:#fff;padding:5px 10px;cursor:pointer;font-size:16px;line-height:1;user-select:none;-webkit-user-select:none;">+</button>' +
-                    '<a id="previewImgDown" href="#" download target="_blank" style="color:#fff;font-size:13px;text-decoration:none;padding:5px 12px;border:1px solid rgba(255,255,255,0.3);border-radius:4px;user-select:none;-webkit-user-select:none;">下载</a>' +
-                    '<button id="previewCloseBtn" style="background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.3);border-radius:4px;color:#fff;padding:5px 10px;cursor:pointer;font-size:16px;line-height:1;user-select:none;-webkit-user-select:none;">✕</button>' +
+            '<div style="position:absolute;top:0;left:0;right:0;height:50px;display:flex;align-items:center;justify-content:space-between;padding:0 20px;background:rgba(0,0,0,0.7);z-index:20;user-select:none;-webkit-user-select:none;">' +
+                '<div id="previewImgName" style="color:#fff;font-size:14px;max-width:40%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></div>' +
+                '<div style="display:flex;gap:8px;">' +
+                    '<button id="previewZoomOut" style="background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);border-radius:4px;color:#fff;padding:4px 10px;cursor:pointer;font-size:16px;line-height:1;">−</button>' +
+                    '<button id="previewZoomReset" style="background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);border-radius:4px;color:#fff;padding:4px 8px;cursor:pointer;font-size:12px;">100%</button>' +
+                    '<button id="previewZoomIn" style="background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);border-radius:4px;color:#fff;padding:4px 10px;cursor:pointer;font-size:16px;line-height:1;">+</button>' +
+                    '<a id="previewImgDown" href="#" download style="color:#fff;font-size:13px;text-decoration:none;padding:4px 12px;border:1px solid rgba(255,255,255,0.3);border-radius:4px;">下载</a>' +
+                    '<button id="previewCloseBtn" style="background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);border-radius:4px;color:#fff;padding:4px 10px;cursor:pointer;font-size:16px;line-height:1;">✕</button>' +
                 '</div>' +
             '</div>' +
-            '<div id="previewImgWrap" style="flex:1;display:flex;justify-content:center;align-items:center;width:100%;height:100%;overflow:hidden;user-select:none;-webkit-user-select:none;position:relative;">' +
-                '<img id="previewImg" style="max-width:92%;max-height:85%;object-fit:contain;cursor:zoom-out;transition:transform 0.15s;user-select:none;-webkit-user-select:none;-webkit-user-drag:none;" />' +
+            '<div id="previewImgWrap" style="position:absolute;top:50px;left:0;right:0;bottom:80px;display:flex;justify-content:center;align-items:center;overflow:hidden;user-select:none;-webkit-user-select:none;">' +
+                '<img id="previewImg" style="max-width:100%;max-height:100%;object-fit:contain;transition:transform 0.15s;user-select:none;-webkit-user-select:none;-webkit-user-drag:none;transform-origin:center center;" />' +
             '</div>' +
-            '<div id="previewLoading" style="position:absolute;color:#fff;font-size:14px;display:none;user-select:none;-webkit-user-select:none;">加载中...</div>' +
-            '<div id="previewCounter" style="position:absolute;bottom:60px;color:rgba(255,255,255,0.7);font-size:13px;user-select:none;-webkit-user-select:none;"></div>' +
-            '<div class="preview-nav-btn preview-prev" style="position:absolute;top:50%;left:15px;transform:translateY(-50%);width:50px;height:80px;background:rgba(0,0,0,0.3);border:none;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#fff;font-size:32px;opacity:0.7;transition:opacity 0.2s,background 0.2s;user-select:none;-webkit-user-select:none;">‹</div>' +
-            '<div class="preview-nav-btn preview-next" style="position:absolute;top:50%;right:15px;transform:translateY(-50%);width:50px;height:80px;background:rgba(0,0,0,0.3);border:none;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#fff;font-size:32px;opacity:0.7;transition:opacity 0.2s,background 0.2s;user-select:none;-webkit-user-select:none;">›</div>' +
-            '<div class="preview-thumbs" style="position:absolute;bottom:10px;left:50%;transform:translateX(-50%);display:flex;gap:8px;max-width:90%;overflow-x:auto;padding:10px;user-select:none;-webkit-user-select:none;"></div>';
+            '<div id="previewLoading" style="position:absolute;color:#fff;font-size:14px;display:none;top:50%;left:50%;transform:translate(-50%,-50%);">加载中...</div>' +
+            '<div id="previewCounter" style="position:absolute;bottom:15px;left:50%;transform:translateX(-50%);color:rgba(255,255,255,0.7);font-size:13px;"></div>' +
+            '<div class="preview-nav-btn preview-prev" style="position:absolute;top:50%;left:10px;transform:translateY(-50%);width:44px;height:70px;background:rgba(0,0,0,0.4);border:none;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#fff;font-size:30px;opacity:0.8;">‹</div>' +
+            '<div class="preview-nav-btn preview-next" style="position:absolute;top:50%;right:10px;transform:translateY(-50%);width:44px;height:70px;background:rgba(0,0,0,0.4);border:none;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#fff;font-size:30px;opacity:0.8;">›</div>' +
+            '<div class="preview-thumbs" style="position:absolute;bottom:40px;left:50%;transform:translateX(-50%);display:flex;gap:6px;max-width:95%;overflow-x:auto;padding:8px;"></div>';
         document.body.appendChild(dialog);
 
         // 关闭按钮事件
@@ -710,7 +709,6 @@ function previewZoom(delta) {
     var img = document.getElementById('previewImg');
     var resetBtn = document.getElementById('previewZoomReset');
     img.style.transform = 'scale(' + window.previewScale + ')';
-    img.style.pointerEvents = window.previewScale > 1 ? 'none' : 'auto';
     resetBtn.textContent = Math.round(window.previewScale * 100) + '%';
 }
 
