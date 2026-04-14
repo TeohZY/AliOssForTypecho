@@ -1,0 +1,235 @@
+.oss-editor-toolbar {
+    margin-top: 12px;
+}
+
+.oss-editor-toolbar-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 14px;
+    border: 1px solid #e6e6e0;
+    border-radius: 8px;
+    background: linear-gradient(180deg, #fbfbf9 0%, #f4f4ef 100%);
+}
+
+.oss-editor-toolbar-copy {
+    min-width: 0;
+}
+
+.oss-editor-toolbar-copy strong {
+    display: block;
+    margin-bottom: 4px;
+    color: #333;
+    font-size: 13px;
+}
+
+.oss-editor-hint {
+    display: block;
+    color: #888;
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.oss-editor-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    display: none;
+}
+
+.oss-editor-modal.is-open {
+    display: block;
+}
+
+.oss-editor-modal-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.35);
+}
+
+.oss-editor-modal-dialog {
+    position: relative;
+    width: min(860px, calc(100vw - 32px));
+    max-height: calc(100vh - 48px);
+    margin: 24px auto;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 18px 48px rgba(0, 0, 0, 0.18);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.oss-editor-modal-header,
+.oss-editor-modal-footer {
+    padding: 14px 16px;
+    border-bottom: 1px solid #eee;
+}
+
+.oss-editor-modal-footer {
+    border-top: 1px solid #eee;
+    border-bottom: none;
+    color: #999;
+    font-size: 12px;
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: center;
+}
+
+.oss-editor-modal-title {
+    margin: 0;
+    font-size: 16px;
+    color: #333;
+}
+
+.oss-editor-modal-tools {
+    margin-top: 10px;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.oss-editor-search {
+    flex: 1;
+    min-width: 0;
+}
+
+.oss-editor-select {
+    min-width: 120px;
+    height: 32px;
+    padding: 0 8px;
+    border: 1px solid #d9d9d6;
+    border-radius: 4px;
+    background: #fff;
+    color: #444;
+}
+
+.oss-editor-modal-body {
+    overflow: auto;
+    padding: 0;
+}
+
+.oss-editor-empty,
+.oss-editor-loading,
+.oss-editor-error {
+    padding: 24px 16px;
+    text-align: center;
+    color: #999;
+}
+
+.oss-editor-error {
+    color: #b94a48;
+}
+
+.oss-editor-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.oss-editor-item {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 96px 160px 92px;
+    gap: 12px;
+    align-items: center;
+    padding: 12px 16px;
+    border-bottom: 1px solid #f0f0ec;
+}
+
+.oss-editor-item:hover {
+    background: #f6f6f3;
+}
+
+.oss-editor-file {
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.oss-editor-thumb,
+.oss-editor-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 6px;
+    flex-shrink: 0;
+}
+
+.oss-editor-thumb {
+    object-fit: cover;
+    border: 1px solid #e6e6e6;
+}
+
+.oss-editor-icon {
+    background: #edf3f7;
+    color: #467b96;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    border: 1px solid #dde7ed;
+}
+
+.oss-editor-name {
+    min-width: 0;
+}
+
+.oss-editor-name strong,
+.oss-editor-name span {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.oss-editor-name strong {
+    color: #333;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.oss-editor-name span {
+    color: #999;
+    font-size: 12px;
+    margin-top: 4px;
+}
+
+.oss-editor-meta {
+    color: #666;
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+.oss-editor-action {
+    text-align: right;
+}
+
+@media (max-width: 768px) {
+    .oss-editor-modal-dialog {
+        width: calc(100vw - 16px);
+        margin: 8px auto;
+        max-height: calc(100vh - 16px);
+    }
+
+    .oss-editor-item {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .oss-editor-meta,
+    .oss-editor-action {
+        text-align: left;
+    }
+
+    .oss-editor-modal-tools {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .oss-editor-toolbar-card {
+        flex-direction: column;
+        align-items: stretch;
+    }
+}

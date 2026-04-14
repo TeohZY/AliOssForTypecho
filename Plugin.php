@@ -20,7 +20,7 @@ if (!defined('__TYPECHO_ROOT_DIR__')) {
 class AliOssForTypecho_Plugin implements Typecho_Plugin_Interface
 {
     // 上传文件目录
-    const UPLOAD_DIR = '/usr/uploads';
+    const UPLOAD_DIR = '/usr/uploads/oss';
 
     /**
      * 激活插件
@@ -34,6 +34,8 @@ class AliOssForTypecho_Plugin implements Typecho_Plugin_Interface
         Typecho_Plugin::factory('Widget_Upload')->deleteHandle = __CLASS__ . '::deleteHandle';
         Typecho_Plugin::factory('Widget_Upload')->attachmentHandle = __CLASS__ . '::attachmentHandle';
         Typecho_Plugin::factory('Widget_Upload')->attachmentDataHandle = __CLASS__ . '::attachmentDataHandle';
+        Typecho_Plugin::factory('admin/write-post.php')->bottom = __CLASS__ . '::renderEditorOssPicker';
+        Typecho_Plugin::factory('admin/write-page.php')->bottom = __CLASS__ . '::renderEditorOssPicker';
 
         // 添加管理菜单项 (3 = "管理" 菜单)
         Helper::addPanel(3, 'AliOssForTypecho/oss-files.php', 'OSS 文件管理', '管理 OSS 文件', 'administrator');
@@ -99,6 +101,37 @@ class AliOssForTypecho_Plugin implements Typecho_Plugin_Interface
     }
 
     /**
+     * 在文章/页面编辑器底部渲染 OSS 文件选择器
+     *
+     * @return void
+     */
+    public static function renderEditorOssPicker(): void
+    {
+        $options = Widget_Options::alloc()->plugin('AliOssForTypecho');
+        if (empty($options->accessKeyId) || empty($options->accessKeySecret) || empty($options->bucket)) {
+            return;
+        }
+
+        $pluginUrl = rtrim(Helper::options()->pluginUrl, '/') . '/AliOssForTypecho/';
+        $apiUrl = \Typecho\Common::url('extending.php?panel=AliOssForTypecho/oss-files.php', Helper::options()->adminUrl);
+        $deleteUrl = \Widget\Security::alloc()->getIndex('/action/contents-attachment-edit');
+        $mediaBaseUrl = \Typecho\Common::url('media.php?cid=', Helper::options()->adminUrl);
+        $cssVersion = filemtime(__DIR__ . '/assets/editor-oss-picker.css');
+        $jsVersion = filemtime(__DIR__ . '/assets/editor-oss-picker.js');
+        ?>
+        <link rel="stylesheet" href="<?php echo $pluginUrl; ?>assets/editor-oss-picker.css?v=<?php echo $cssVersion; ?>" />
+        <script>
+        window.AliOssForTypechoEditorConfig = {
+            apiUrl: <?php echo json_encode($apiUrl); ?>,
+            deleteUrl: <?php echo json_encode($deleteUrl); ?>,
+            mediaBaseUrl: <?php echo json_encode($mediaBaseUrl); ?>
+        };
+        </script>
+        <script src="<?php echo $pluginUrl; ?>assets/editor-oss-picker.js?v=<?php echo $jsVersion; ?>"></script>
+        <?php
+    }
+
+    /**
      * 上传文件处理
      *
      * @param array $file 上传的文件
@@ -125,33 +158,17 @@ class AliOssForTypecho_Plugin implements Typecho_Plugin_Interface
             return false;
         }
 
-        // 根据命名格式生成文件名
-        if ($options->renameFormat === 'original') {
-            // 保留原文件名
-            $originalName = $file['name'];
-            // 移除扩展名获取基础名
-            $baseName = pathinfo($originalName, PATHINFO_FILENAME);
-            // 清理非法字符
-            $baseName = preg_replace('/[^a-zA-Z0-9_\-\x{4e00}-\x{9fa5}]/u', '', $baseName);
-            if (empty($baseName)) {
-                $baseName = 'file';
-            }
-            $fileName = $baseName . '.' . $ext;
-        } else {
-            // 时间戳格式
-            $fileName = sprintf('%u', crc32(microtime(true))) . '.' . $ext;
-        }
-
-        // 构建本地路径（用于数据库记录）
-        $path = self::UPLOAD_DIR . '/' . $fileName;
-
-        // 上传到 OSS
         try {
+            $fileName = self::buildFileName($file['name'], $ext, $options->renameFormat);
+            $path = self::UPLOAD_DIR . '/' . $fileName;
             $ossClient = self::OssInit();
-            $ossPath = rtrim(ltrim($options->pathPrefix, '/'), '/') . '/' . $fileName;
+            $ossPath = self::buildOssPath($options->pathPrefix, $fileName);
 
             // 获取文件内容
             $content = file_get_contents($uploadFile);
+            if ($content === false) {
+                throw new RuntimeException('Failed to read upload file.');
+            }
             $finfo = finfo_open(FILEINFO_MIME_TYPE);
             $mimeType = finfo_file($finfo, $uploadFile);
             finfo_close($finfo);
@@ -163,14 +180,15 @@ class AliOssForTypecho_Plugin implements Typecho_Plugin_Interface
                 contentType: $mimeType
             );
             $ossClient->putObject($request);
-        } catch (Exception $e) {
-            error_log('AliOssForTypecho upload error: ' . $e->getMessage());
-            return false;
-        }
 
-        // 返回文件信息
-        if (!isset($file['size'])) {
-            $file['size'] = filesize($uploadFile);
+            if (!isset($file['size'])) {
+                $file['size'] = filesize($uploadFile);
+            }
+        } catch (Exception $e) {
+            self::logOssError('upload', $e);
+            return false;
+        } finally {
+            self::cleanupTemporaryUploadFile($file, $uploadFile);
         }
 
         return [
@@ -207,9 +225,12 @@ class AliOssForTypecho_Plugin implements Typecho_Plugin_Interface
             $ossClient = self::OssInit();
             // 从本地路径提取文件名
             $fileName = basename($path);
-            $ossPath = rtrim(ltrim($options->pathPrefix, '/'), '/') . '/' . $fileName;
+            $ossPath = self::buildOssPath($options->pathPrefix, $fileName);
 
             $content = file_get_contents($uploadFile);
+            if ($content === false) {
+                throw new RuntimeException('Failed to read upload file.');
+            }
             $finfo = finfo_open(FILEINFO_MIME_TYPE);
             $mimeType = finfo_file($finfo, $uploadFile);
             finfo_close($finfo);
@@ -221,12 +242,15 @@ class AliOssForTypecho_Plugin implements Typecho_Plugin_Interface
                 contentType: $mimeType
             );
             $ossClient->putObject($request);
-        } catch (Exception $e) {
-            return false;
-        }
 
-        if (!isset($file['size'])) {
-            $file['size'] = filesize($uploadFile);
+            if (!isset($file['size'])) {
+                $file['size'] = filesize($uploadFile);
+            }
+        } catch (Exception $e) {
+            self::logOssError('modify', $e);
+            return false;
+        } finally {
+            self::cleanupTemporaryUploadFile($file, $uploadFile);
         }
 
         return [
@@ -246,20 +270,7 @@ class AliOssForTypecho_Plugin implements Typecho_Plugin_Interface
      */
     public static function deleteHandle(array $content): bool
     {
-        $options = Widget_Options::alloc()->plugin('AliOssForTypecho');
-
-        try {
-            $ossClient = self::OssInit();
-            // 从本地路径提取文件名
-            $fileName = basename($content['attachment']->path);
-            $ossPath = rtrim(ltrim($options->pathPrefix, '/'), '/') . '/' . $fileName;
-
-            $request = new AlibabaCloud\Oss\V2\Models\DeleteObjectRequest($options->bucket, $ossPath);
-            $ossClient->deleteObject($request);
-        } catch (Exception $e) {
-            return false;
-        }
-
+        // Typecho 侧任何删除都只删除记录，不删除 OSS 对象。
         return true;
     }
 
@@ -280,7 +291,7 @@ class AliOssForTypecho_Plugin implements Typecho_Plugin_Interface
 
         // 从本地路径提取文件名
         $fileName = basename($attachment->path);
-        $ossPath = rtrim(ltrim($options->pathPrefix, '/'), '/') . '/' . $fileName;
+        $ossPath = self::buildOssPath($options->pathPrefix, $fileName);
         return rtrim($domain, '/') . '/' . $ossPath;
     }
 
@@ -298,12 +309,13 @@ class AliOssForTypecho_Plugin implements Typecho_Plugin_Interface
             $ossClient = self::OssInit();
             // 从本地路径提取文件名
             $fileName = basename($content['attachment']->path);
-            $ossPath = rtrim(ltrim($options->pathPrefix, '/'), '/') . '/' . $fileName;
+            $ossPath = self::buildOssPath($options->pathPrefix, $fileName);
 
             $request = new AlibabaCloud\Oss\V2\Models\GetObjectRequest($options->bucket, $ossPath);
             $result = $ossClient->getObject($request);
             return $result;
         } catch (Exception $e) {
+            self::logOssError('attachment_data', $e);
             return '';
         }
     }
@@ -376,5 +388,71 @@ class AliOssForTypecho_Plugin implements Typecho_Plugin_Interface
         $info = pathinfo($name);
         $name = substr($info['basename'], 1);
         return isset($info['extension']) ? strtolower($info['extension']) : '';
+    }
+
+    /**
+     * 生成 OSS 路径
+     *
+     * @param string $prefix
+     * @param string $fileName
+     * @return string
+     */
+    private static function buildOssPath(string $prefix, string $fileName): string
+    {
+        $prefix = trim($prefix, '/');
+        return $prefix === '' ? $fileName : $prefix . '/' . $fileName;
+    }
+
+    /**
+     * 根据配置生成文件名
+     *
+     * @param string $originalName
+     * @param string $ext
+     * @param string $renameFormat
+     * @return string
+     */
+    private static function buildFileName(string $originalName, string $ext, string $renameFormat): string
+    {
+        if ($renameFormat !== 'original') {
+            return sprintf('%u', crc32(microtime(true))) . '.' . $ext;
+        }
+
+        $baseName = pathinfo($originalName, PATHINFO_FILENAME);
+        $baseName = preg_replace('/[^a-zA-Z0-9_\-\x{4e00}-\x{9fa5}]/u', '', $baseName);
+        if (empty($baseName)) {
+            $baseName = 'file';
+        }
+
+        return $baseName . '.' . $ext;
+    }
+
+    /**
+     * 清理插件自行创建的临时文件
+     *
+     * @param array $file
+     * @param string $uploadFile
+     * @return void
+     */
+    private static function cleanupTemporaryUploadFile(array $file, string $uploadFile): void
+    {
+        if ($uploadFile === '') {
+            return;
+        }
+
+        if (!isset($file['tmp_name']) && file_exists($uploadFile)) {
+            @unlink($uploadFile);
+        }
+    }
+
+    /**
+     * 输出统一错误日志
+     *
+     * @param string $operation
+     * @param Exception $e
+     * @return void
+     */
+    private static function logOssError(string $operation, Exception $e): void
+    {
+        error_log(sprintf('AliOssForTypecho %s error: %s', $operation, $e->getMessage()));
     }
 }
